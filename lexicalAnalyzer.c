@@ -18,6 +18,8 @@
 #define TOK_BITLSHFT 269
 #define TOK_GREQ 270
 #define TOK_LSEQ 271
+#define TOK_INC 272
+#define TOK_DEC 273
 
 FILE *yyin;
 char *yytext;
@@ -69,13 +71,13 @@ int yylex() {
         case '}' :
         case '(' :
         case ')' :
-        case '+' :
-        case '-' :
         case '*' :
         case ';' :
         case '/' : currentState = SpecialState;
         break;
-
+        
+        case '+' :
+        case '-' :
         case '!' :
         case '>' :
         case '<' :  
@@ -207,6 +209,14 @@ int yylex() {
                         yytext[yylen] = nextChar;
                         yylen++;
                         return TOK_BITLSHFT;
+                    } else if(ch == '+' && nextChar == '+') {
+                        yytext[yylen] = nextChar;
+                        yylen++;
+                        return TOK_INC;
+                    } else if(ch == '-' && nextChar == '-') {
+                        yytext[yylen] = nextChar;
+                        yylen++;
+                        return TOK_DEC;
                     } else {
                         fseek(yyin, -1, SEEK_CUR);
                         return ch;
