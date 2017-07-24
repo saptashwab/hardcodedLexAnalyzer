@@ -25,12 +25,13 @@ FILE *yyin;
 char *yytext;
 int yylen;
 
-enum States{WhiteSpaceState, TextState, NumericState, UnderscoreState, SpecialState, SuperSpecialState} states;
+enum States{WhiteSpaceState, TextState, NumericState, UnderscoreState, SpecialState, SuperSpecialState, InvalidState, EndState} states;
 int currentState = -1;
 int prevState = -1;
 int prevNonWhiteState = -1;
 char prevChar;
 int flag = -1;
+int clearFlag = -1;
 
 int yylex();
 
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]) {
         yyin = fopen(argv[1],"r");
         while(!feof(yyin)) {
             token = yylex();
-            printf("%d\n",token);
+            printf("%d\t%s\n",token, yytext);
         }
     }
     return 0;
@@ -93,12 +94,28 @@ int yylex() {
         case 97 ... 122 :
         case 65 ... 90 : currentState = TextState;
         break;
+
+        case -1 : currentState = EndState;
+        break;
         
-        default : currentState = WhiteSpaceState;
+        default : currentState = InvalidState;
     }
     // yytext[yylen] = ch;
     // yylen++;
     // prevChar = ch;
+    if(clearFlag == 1) {
+        yylen = 0;
+        //yytext = "";
+        free(yytext);
+        yytext = malloc(256);
+        clearFlag = 0;
+    }
+
+    if(currentState == InvalidState) {
+        fprintf(stderr, "Invalid! Language not recognized\t%c\n", ch);
+        clearFlag = 1;
+        return yylex();
+    }
 
     if(currentState == TextState) {
         if(flag == 2) {
@@ -155,13 +172,15 @@ int yylex() {
 
             fseek(yyin, -1, SEEK_CUR);
             flag = -1;
-            yylen = 0;
-            yytext = "";
-            yytext = malloc(256);
+            clearFlag = 1;
+            // yylen = 0;
+            // yytext = "";
+            // yytext = malloc(256);
             return token;
         } else if(flag == 2) {
             fseek(yyin, -1, SEEK_CUR);
             flag = -1;
+            clearFlag = 1;
             return TOK_INTCONST;
         } else {
             if(currentState != WhiteSpaceState) {
@@ -182,8 +201,10 @@ int yylex() {
                         return yylex();
                     }
                 }
+                clearFlag = 1;
 
                 if(currentState == SuperSpecialState) {
+                    clearFlag = 1;
                     char nextChar = getc(yyin);
                     if(ch == '!' && nextChar == '=') {
                         yytext[yylen] = nextChar;
